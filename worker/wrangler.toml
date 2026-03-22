@@ -1,0 +1,9 @@
+name = "raona-uat-worker"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+[ai]
+binding = "AI"
+
+[vars]
+ALLOWED_ORIGIN = "https://raona-uat.pages.dev"

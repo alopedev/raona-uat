@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raona UAT</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <p class="header-eyebrow">Raona // herramienta interna</p>
+      <h1>Generador<br>Test Cases</h1>
+    </header>
+
+    <!-- 2-column brutalist grid -->
+    <div class="form-layout">
+
+      <!-- LEFT: Auth + Upload -->
+      <div class="section section--left" id="auth-section">
+        <div class="section-label">01 — Acceso</div>
+        <div class="form-group">
+          <label for="team-token">Contraseña equipo</label>
+          <input type="password" id="team-token" data-testid="team-token" placeholder="_ _ _ _ _ _ _ _">
+        </div>
+      </div>
+
+      <!-- RIGHT: Metadata -->
+      <div class="section section--right" id="metadata-section" style="grid-row: span 2;">
+        <div class="section-label">03 — Informe</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="meta-project">Proyecto</label>
+            <input type="text" id="meta-project" data-testid="meta-project" placeholder="True Copy Beta 3">
+          </div>
+          <div class="form-group">
+            <label for="meta-client">Cliente</label>
+            <input type="text" id="meta-client" data-testid="meta-client" placeholder="Esteve">
+          </div>
+          <div class="form-group">
+            <label for="meta-consultant">Consultor</label>
+            <input type="text" id="meta-consultant" data-testid="meta-consultant" placeholder="Alex Olivé">
+          </div>
+          <div class="form-group">
+            <label for="meta-env">Entorno</label>
+            <input type="text" id="meta-env" data-testid="meta-env" placeholder="SharePoint Online (PRE)">
+          </div>
+          <div class="form-group full-width">
+            <label for="meta-date">Fecha</label>
+            <input type="date" id="meta-date">
+          </div>
+        </div>
+      </div>
+
+      <!-- LEFT: File upload -->
+      <div class="section section--left" id="upload-section">
+        <div class="section-label">02 — Documentos</div>
+
+        <div class="drop-zone" id="drop-zone" data-testid="drop-zone">
+          <div class="drop-zone-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>
+          </div>
+          <div class="drop-zone-text">Subir archivos</div>
+          <div class="drop-zone-hint">PDF &middot; XLSX &middot; CSV</div>
+          <input type="file" id="file-input" multiple accept=".pdf,.xlsx,.xls,.csv" style="display:none">
+        </div>
+
+        <div class="file-chips" id="file-chips"></div>
+
+        <div class="separator">o pegar texto</div>
+
+        <textarea id="pasted-text" data-testid="pasted-text" placeholder="Pegar documentación aquí..." rows="4"></textarea>
+      </div>
+
+      <!-- FULL: Generate row -->
+      <div class="generate-row">
+        <span class="generate-label" id="generate-label">&gt; Ejecutar generación</span>
+        <button class="btn-circle" id="btn-generate" data-testid="btn-generate" disabled aria-label="Generar Test Cases">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </button>
+      </div>
+
+      <!-- FULL: Progress -->
+      <div class="progress-container hidden" id="progress">
+        <div class="progress-step" id="step-extract">
+          <span>Extrayendo texto...</span>
+          <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+        </div>
+        <div class="progress-step" id="step-generate">
+          <span>Generando test cases...</span>
+          <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+        </div>
+        <div class="progress-step" id="step-excel">
+          <span>Construyendo Excel...</span>
+          <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- FULL: Error -->
+      <div class="error-msg hidden" id="error-msg"></div>
+
+      <!-- FULL: Warning -->
+      <div class="warning-msg hidden" id="warning-msg"></div>
+
+      <!-- FULL: Result -->
+      <div class="result hidden" id="result">
+        <div class="result-stats" id="result-stats"></div>
+        <button class="btn-download" id="btn-download" data-testid="btn-download">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar .xlsx
+        </button>
+      </div>
+
+    </div><!-- /form-layout -->
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
+  <!-- App modules -->
+  <script src="js/file-parser.js"></script>
+  <script src="js/excel-builder.js"></script>
+  <script src="js/tc-generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

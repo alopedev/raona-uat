@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test — Excel Builder</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 80px auto;
+      padding: 0 20px;
+      color: #333;
+    }
+    h1 { font-size: 1.4rem; font-weight: 600; }
+    p { color: #666; line-height: 1.5; }
+    button {
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #16213e; }
+    button:active { transform: scale(0.98); }
+    #status {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #2E7D32;
+    }
+    .error { color: #C00000 !important; }
+  </style>
+</head>
+<body>
+  <h1>Test — Excel Builder</h1>
+  <p>Genera un Excel UAT de ejemplo con 13 test cases (True Copy Beta 3) y 3 bugs.</p>
+  <button id="btn" onclick="runTest()">Generar Excel</button>
+  <div id="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="../webapp/js/excel-builder.js"></script>
+  <script>
+    async function runTest() {
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      status.textContent = 'Cargando datos mock...';
+      status.className = '';
+
+      try {
+        const res = await fetch('mock-data.json');
+        const cfg = await res.json();
+
+        status.textContent = 'Generando Excel...';
+        await downloadUATExcel(cfg);
+
+        const tcCount = cfg.test_cases.length;
+        const bugCount = cfg.bugs.length;
+        status.textContent = `Excel generado: ${tcCount} test cases, ${bugCount} bugs, 3 pestañas.`;
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+        status.className = 'error';
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
