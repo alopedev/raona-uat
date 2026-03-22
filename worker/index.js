@@ -9,7 +9,7 @@
  */
 
 const MAX_BODY_SIZE = 512_000;
-const MAX_TOKENS_CEILING = 4096;
+const MAX_TOKENS_CEILING = 16384;
 const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 /**

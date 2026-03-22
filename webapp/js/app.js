@@ -9,7 +9,6 @@
  * @param {string} params.projectName
  * @param {string} params.client
  * @param {string} params.consultant
- * @param {string} params.environment
  * @param {string} params.dateValue — YYYY-MM-DD
  * @param {string} params.locale
  * @param {Object} params.dateOptions
@@ -17,7 +16,7 @@
  * @param {import('./excel-builder').TestCase[]} params.testCases
  * @returns {import('./excel-builder').UATConfig}
  */
-function buildUATConfig({ projectName, client, consultant, environment, dateValue, locale, dateOptions, headerColor, testCases }) {
+function buildUATConfig({ projectName, client, consultant, dateValue, locale, dateOptions, headerColor, testCases }) {
   const date = dateValue ? new Date(dateValue) : new Date();
   const formattedDate = date.toLocaleDateString(locale, dateOptions);
   return {
@@ -25,8 +24,7 @@ function buildUATConfig({ projectName, client, consultant, environment, dateValu
     date: formattedDate,
     client,
     consultant,
-    environment,
-    objective: `Verificar el correcto funcionamiento de ${projectName} en el entorno ${environment}.`,
+    objective: `Verificar el correcto funcionamiento de ${projectName}.`,
     header_color: headerColor,
     test_cases: testCases,
     bugs: [],
@@ -77,7 +75,7 @@ if (typeof window !== 'undefined') (function () {
   const metaProject = $('meta-project');
   const metaClient = $('meta-client');
   const metaConsultant = $('meta-consultant');
-  const metaEnv = $('meta-env');
+  const metaMinTCs = $('meta-min-tcs');
   const metaDate = $('meta-date');
   const btnGenerate = $('btn-generate');
   const progressContainer = $('progress');
@@ -154,7 +152,7 @@ if (typeof window !== 'undefined') (function () {
 
     pastedText.addEventListener('input', debouncedValidate);
 
-    for (const el of [metaProject, metaClient, metaConsultant, metaEnv]) {
+    for (const el of [metaProject, metaClient, metaConsultant]) {
       el.addEventListener('input', debouncedValidate);
     }
 
@@ -211,7 +209,7 @@ if (typeof window !== 'undefined') (function () {
   // ---------------------------------------------------------------------------
   function validateForm() {
     const hasContent = uploadedFiles.length > 0 || val(pastedText).length > 0;
-    const hasMeta = val(metaProject) && val(metaClient) && val(metaConsultant) && val(metaEnv);
+    const hasMeta = val(metaProject) && val(metaClient) && val(metaConsultant);
     const hasToken = val(tokenInput).length > 0;
 
     btnGenerate.disabled = !(hasContent && hasMeta && hasToken);
@@ -286,6 +284,8 @@ if (typeof window !== 'undefined') (function () {
       // --- Step 2: Generate TCs ---
       setStepActive(stepGenerate);
 
+      const minTCs = parseInt(metaMinTCs.value, 10) || 10;
+
       const testCases = await generateTestCases(
         CONFIG.workerUrl,
         val(tokenInput),
@@ -293,7 +293,8 @@ if (typeof window !== 'undefined') (function () {
         (partial) => {
           stepGenerate.querySelector('span').textContent =
             `Generando test cases... (${partial.length} caracteres)`;
-        }
+        },
+        minTCs
       );
 
       stepGenerate.querySelector('span').textContent = 'Generando test cases...';
@@ -306,7 +307,6 @@ if (typeof window !== 'undefined') (function () {
         projectName: val(metaProject),
         client: val(metaClient),
         consultant: val(metaConsultant),
-        environment: val(metaEnv),
         dateValue: metaDate.value,
         locale: CONFIG.dateLocale,
         dateOptions: CONFIG.dateOptions,

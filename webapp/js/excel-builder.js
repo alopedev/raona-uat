@@ -21,7 +21,6 @@
  * @property {string} date
  * @property {string} client
  * @property {string} consultant
- * @property {string} environment
  * @property {string} objective
  * @property {string} [header_color] — Hex sin #, defecto: 80C1CD
  * @property {TestCase[]} [test_cases]
@@ -32,15 +31,15 @@
 // Estilos base (frozen objects — modern-javascript-patterns)
 // ---------------------------------------------------------------------------
 
-const THIN_BORDER = {
-  left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-};
+const THIN_BORDER = Object.freeze({
+  left: Object.freeze({ style: 'thin', color: Object.freeze({ argb: 'FFD0D0D0' }) }),
+  right: Object.freeze({ style: 'thin', color: Object.freeze({ argb: 'FFD0D0D0' }) }),
+  top: Object.freeze({ style: 'thin', color: Object.freeze({ argb: 'FFD0D0D0' }) }),
+  bottom: Object.freeze({ style: 'thin', color: Object.freeze({ argb: 'FFD0D0D0' }) }),
+});
 
-const WRAP_TOP = { wrapText: true, vertical: 'top' };
-const WRAP_CENTER = { wrapText: true, vertical: 'top', horizontal: 'center' };
+const WRAP_TOP = Object.freeze({ wrapText: true, vertical: 'top' });
+const WRAP_CENTER = Object.freeze({ wrapText: true, vertical: 'top', horizontal: 'center' });
 
 // Títulos y secciones (pestaña Instrucciones)
 const TITLE_FONT = { name: 'Poppins', size: 14, bold: true, color: { argb: 'FF333333' } };
@@ -84,11 +83,11 @@ const LEGEND_ITEMS = Object.freeze([
   { label: 'No validado', desc: 'Testeado y no aprobado', fill: FILL_NO_VALIDADO },
 ]);
 
-const TC_STATUS_MAP = {
-  'Validado': { font: FONT_VALIDADO, fill: FILL_VALIDADO },
-  'No validado': { font: FONT_NO_VALIDADO, fill: FILL_NO_VALIDADO },
-  'Pendiente de validar': { font: FONT_PENDIENTE, fill: FILL_PENDIENTE },
-};
+const TC_STATUS_MAP = Object.freeze({
+  'Validado': Object.freeze({ font: FONT_VALIDADO, fill: FILL_VALIDADO }),
+  'No validado': Object.freeze({ font: FONT_NO_VALIDADO, fill: FILL_NO_VALIDADO }),
+  'Pendiente de validar': Object.freeze({ font: FONT_PENDIENTE, fill: FILL_PENDIENTE }),
+});
 
 // ---------------------------------------------------------------------------
 // Funciones auxiliares
@@ -160,34 +159,26 @@ function buildInstrucciones(wb, cfg) {
   ws.getCell('A4').alignment = WRAP_TOP;
   ws.getRow(4).height = 45;
 
-  // Entorno
-  ws.getCell('A6').value = 'Entorno de pruebas';
-  ws.getCell('A6').font = SECTION_FONT;
-  ws.getCell('A7').value = cfg.environment;
-  ws.getCell('A7').font = BODY_FONT;
-  ws.getCell('A7').alignment = WRAP_TOP;
-  ws.getRow(7).height = 30;
-
   // Criterios de aceptación
-  ws.getCell('A9').value = 'Criterios de aceptación';
-  ws.getCell('A9').font = SECTION_FONT;
-  ws.getCell('A10').value =
+  ws.getCell('A6').value = 'Criterios de aceptación';
+  ws.getCell('A6').font = SECTION_FONT;
+  ws.getCell('A7').value =
     '— Cada test case se marca como "Validado" si el comportamiento observado ' +
     'coincide con el resultado esperado.\n' +
     '— Se marca como "No validado" si el comportamiento difiere del esperado. ' +
     'En ese caso, se documenta en Observaciones y se registra como defecto.\n' +
     '— Los defectos identificados durante el testing se reportan en Azure DevOps ' +
     'y se resumen en la pestaña "Bugs identificados".';
-  ws.getCell('A10').font = BODY_FONT;
-  ws.getCell('A10').alignment = WRAP_TOP;
-  ws.getRow(10).height = 65;
+  ws.getCell('A7').font = BODY_FONT;
+  ws.getCell('A7').alignment = WRAP_TOP;
+  ws.getRow(7).height = 65;
 
   // Leyenda de estados
-  ws.getCell('A12').value = 'Estados de validación';
-  ws.getCell('A12').font = SECTION_FONT;
+  ws.getCell('A9').value = 'Estados de validación';
+  ws.getCell('A9').font = SECTION_FONT;
 
   LEGEND_ITEMS.forEach((item, i) => {
-    const rowIdx = 13 + i;
+    const rowIdx = 10 + i;
     const cellA = ws.getCell(rowIdx, 1);
     cellA.value = `    ${item.label}`;
     cellA.font = TABLE_BOLD;
@@ -283,11 +274,6 @@ function buildTestCases(wb, cfg) {
     }
   }
 
-  // Footer
-  const footerRow = DATA_START + testCases.length + 1;
-  ws.mergeCells(`B${footerRow}:G${footerRow}`);
-  ws.getCell(`B${footerRow}`).value = `Entorno: ${cfg.environment}`;
-  ws.getCell(`B${footerRow}`).font = META_FONT;
 }
 
 function buildBugs(wb, cfg) {
@@ -363,7 +349,8 @@ function buildBugs(wb, cfg) {
  * @returns {Promise<ExcelJS.Workbook>}
  */
 async function generateUATWorkbook(cfg) {
-  const wb = new ExcelJS.Workbook();
+  const _ExcelJS = typeof ExcelJS !== 'undefined' ? ExcelJS : require('exceljs');
+  const wb = new _ExcelJS.Workbook();
   wb.creator = 'Raona UAT Generator';
   wb.created = new Date();
 
@@ -375,5 +362,10 @@ async function generateUATWorkbook(cfg) {
   buildBugs(wb, cfg);
 
   return wb;
+}
+
+// Conditional export for Node.js/vitest
+if (typeof module !== 'undefined') {
+  module.exports = { generateUATWorkbook };
 }
 

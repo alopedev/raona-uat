@@ -11,7 +11,6 @@ describe('buildUATConfig', () => {
     projectName: 'True Copy Beta 3',
     client: 'Esteve',
     consultant: 'Alex Olivé',
-    environment: 'SharePoint Online (PRE)',
     dateValue: '2026-03-20',
     locale: 'es-ES',
     dateOptions: { day: 'numeric', month: 'long', year: 'numeric' },
@@ -27,10 +26,15 @@ describe('buildUATConfig', () => {
     expect(cfg.bugs).toEqual([]);
   });
 
-  it('generates objective from project + environment', () => {
+  it('generates objective from project name only', () => {
     const cfg = buildUATConfig(base);
     expect(cfg.objective).toContain('True Copy Beta 3');
-    expect(cfg.objective).toContain('SharePoint Online (PRE)');
+  });
+
+  it('does not include environment in config', () => {
+    const cfg = buildUATConfig(base);
+    expect(cfg).not.toHaveProperty('environment');
+    expect(cfg.objective).not.toMatch(/entorno/i);
   });
 
   it('formats date in Spanish locale', () => {

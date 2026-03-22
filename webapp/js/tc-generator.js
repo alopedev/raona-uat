@@ -3,14 +3,19 @@
  * @typedef {import('./excel-builder').TestCase} TestCase
  */
 
-/** @type {string} */
-const SYSTEM_PROMPT = `Eres un generador experto de test cases para validaciones UAT de proyectos de software.
+/**
+ * Build system prompt with dynamic minTCs injection.
+ * @param {number} minTCs — minimum number of test cases to generate
+ * @returns {string}
+ */
+function buildSystemPrompt(minTCs) {
+  return `Eres un generador experto de test cases para validaciones UAT de proyectos de software.
 
-A partir de la documentación proporcionada, genera test cases siguiendo estas reglas:
+A partir de la documentación proporcionada, genera un mínimo de ${minTCs} test cases siguiendo estas reglas:
 
 REGLAS:
 1. Cobertura end-to-end: seguir flujo natural del usuario (crear → usar → gestionar → auditar)
-2. 1 TC = 1 funcionalidad: no mezclar flujos distintos en un mismo TC
+2. 1 TC = 1 funcionalidad: no mezclar flujos distintos en un mismo TC. Si un test case cubre más de una funcionalidad, divídelo en TCs separados.
 3. Descripción en imperativo: acciones del tester ("Subir PDF a Inbox...", "Filtrar por estado...")
 4. Resultado verificable: comportamiento observable ("Documento aparece con estado Vigente")
 5. Roles explícitos: TC específico para restricciones de permisos (qué NO puede hacer cada rol)
@@ -33,9 +38,10 @@ FORMATO DE SALIDA — responde SOLO con JSON, sin texto adicional:
     "observations": "—"
   }
 ]`;
+}
 
 /** @type {number} Must match worker MAX_TOKENS_CEILING */
-const CLIENT_MAX_TOKENS = 4096;
+const CLIENT_MAX_TOKENS = 16384;
 
 /**
  * Parse error body safely — returns message string.
@@ -52,8 +58,7 @@ function parseErrorBody(body) {
 }
 
 /**
- * Parse SSE stream, accumulating text deltas.
- * Supports both Workers AI format ({"response":"text"}) and Claude format.
+ * Parse SSE stream from Workers AI, accumulating text deltas.
  * @param {ReadableStream} stream
  * @param {(partial: string) => void} [onProgress]
  * @returns {Promise<string>} — accumulated text
@@ -87,12 +92,6 @@ async function parseSSEStream(stream, onProgress) {
           continue;
         }
         if ('response' in event) continue; // skip null/usage events
-
-        // Claude format: { type: "content_block_delta", delta: { text: "..." } }
-        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-          accumulated += event.delta.text;
-          onProgress?.(accumulated);
-        }
 
         if (event.type === 'error') {
           throw new Error(event.error?.message ?? 'Error en la respuesta');
@@ -146,14 +145,10 @@ function extractTestCasesJSON(text) {
  * @param {string} teamToken — contraseña de equipo
  * @param {string} documentText — texto extraído de la documentación
  * @param {(partial: string) => void} [onProgress] — callback con texto parcial acumulado
+ * @param {number} [minTCs=10] — mínimo de test cases a generar
  * @returns {Promise<TestCase[]>} — array de test cases
  */
-// Conditional export for Node.js/vitest (browser ignores this)
-if (typeof module !== 'undefined') {
-  module.exports = { extractTestCasesJSON, parseSSEStream, parseErrorBody, SYSTEM_PROMPT, CLIENT_MAX_TOKENS };
-}
-
-async function generateTestCases(workerUrl, teamToken, documentText, onProgress) {
+async function generateTestCases(workerUrl, teamToken, documentText, onProgress, minTCs = 10) {
   let response;
   try {
     response = await fetch(workerUrl, {
@@ -164,7 +159,7 @@ async function generateTestCases(workerUrl, teamToken, documentText, onProgress)
       },
       body: JSON.stringify({
         max_tokens: CLIENT_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(minTCs),
       messages: [{ role: 'user', content: documentText }],
     }),
     });
@@ -179,4 +174,9 @@ async function generateTestCases(workerUrl, teamToken, documentText, onProgress)
 
   const accumulated = await parseSSEStream(response.body, onProgress);
   return extractTestCasesJSON(accumulated);
+}
+
+// Conditional export for Node.js/vitest (browser ignores this)
+if (typeof module !== 'undefined') {
+  module.exports = { extractTestCasesJSON, parseSSEStream, parseErrorBody, buildSystemPrompt, CLIENT_MAX_TOKENS };
 }

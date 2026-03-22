@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { extractTestCasesJSON } from '../webapp/js/tc-generator.js';
+import { extractTestCasesJSON, buildSystemPrompt } from '../webapp/js/tc-generator.js';
 
 describe('extractTestCasesJSON', () => {
 
@@ -40,6 +40,29 @@ describe('extractTestCasesJSON', () => {
   it('handles unicode and accents', () => {
     const input = '[{"tc_id":"TC-01","area":"Creación espacio","description":"Solicitar creación","expected_result":"OK","status":"Pendiente de validar","observations":"—"}]';
     expect(extractTestCasesJSON(input)[0].area).toBe('Creación espacio');
+  });
+
+});
+
+describe('buildSystemPrompt', () => {
+
+  it('injects minTCs number into the prompt', () => {
+    const prompt = buildSystemPrompt(15);
+    expect(prompt).toContain('15');
+    expect(prompt).toMatch(/mínimo.*15/i);
+  });
+
+  it('includes rule to split multi-functionality TCs', () => {
+    const prompt = buildSystemPrompt(10);
+    expect(prompt).toMatch(/div[ií]d/i);
+  });
+
+  it('uses different values for different minTCs', () => {
+    const prompt8 = buildSystemPrompt(8);
+    const prompt20 = buildSystemPrompt(20);
+    expect(prompt8).toContain('8');
+    expect(prompt20).toContain('20');
+    expect(prompt8).not.toContain('20');
   });
 
 });
