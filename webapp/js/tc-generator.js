@@ -103,6 +103,27 @@ async function parseSSEStream(stream, onProgress) {
     }
   }
 
+  // Flush any remaining bytes in the decoder (handles split UTF-8 sequences)
+  const remaining = decoder.decode();
+  if (remaining) {
+    buffer += remaining;
+  }
+
+  // Process any remaining buffered line
+  if (buffer.trim()) {
+    if (buffer.startsWith('data: ')) {
+      const data = buffer.slice(6);
+      if (data !== '[DONE]') {
+        try {
+          const event = JSON.parse(data);
+          if (event.response != null && typeof event.response === 'string') {
+            accumulated += event.response;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
   return accumulated;
 }
 
@@ -112,31 +133,72 @@ async function parseSSEStream(stream, onProgress) {
  * @returns {TestCase[]}
  */
 function extractTestCasesJSON(text) {
-  const jsonMatch = text.trim().match(/\[[\s\S]*\]/);
+  const trimmed = text.trim();
+  let jsonMatch = trimmed.match(/\[[\s\S]*\]/);
+
+  // If no complete array found, attempt truncation recovery
   if (!jsonMatch) {
-    throw new Error('La respuesta no tiene el formato esperado — inténtalo de nuevo');
-  }
-
-  let jsonStr = jsonMatch[0];
-
-  // Attempt direct parse first
-  try {
-    return JSON.parse(jsonStr);
-  } catch {
-    // LLMs sometimes produce slightly malformed JSON — try to repair common issues:
-    // 1. Unquoted values after colon (e.g. "observations":— instead of "observations":"—")
-    jsonStr = jsonStr.replace(/:(\s*)([^"\s\d\[\]{},][^,}\]]*)/g, ':$1"$2"');
-    // 2. Trailing commas before } or ]
-    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-    // 3. Single quotes instead of double
-    jsonStr = jsonStr.replace(/'/g, '"');
-
-    try {
-      return JSON.parse(jsonStr);
-    } catch {
+    const recovered = recoverTruncatedJSON(trimmed);
+    if (recovered) {
+      jsonMatch = [recovered];
+    } else {
       throw new Error('La respuesta no tiene el formato esperado — inténtalo de nuevo');
     }
   }
+
+  let jsonStr = jsonMatch[0];
+  return parseWithRepair(jsonStr);
+}
+
+/**
+ * Attempt to recover complete TC objects from truncated JSON.
+ * Finds the last complete object (ending with }) and closes the array.
+ * @param {string} text
+ * @returns {string|null} — repaired JSON string or null
+ */
+function recoverTruncatedJSON(text) {
+  const start = text.indexOf('[');
+  if (start === -1) return null;
+
+  const content = text.slice(start + 1);
+  // Find all complete objects by matching balanced braces
+  const objects = [];
+  let depth = 0;
+  let objStart = -1;
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (ch === '{' && depth === 0) objStart = i;
+    if (ch === '{') depth++;
+    if (ch === '}') depth--;
+    if (ch === '}' && depth === 0 && objStart !== -1) {
+      objects.push(content.slice(objStart, i + 1));
+      objStart = -1;
+    }
+  }
+
+  if (objects.length === 0) return null;
+  return '[' + objects.join(',') + ']';
+}
+
+/**
+ * Parse JSON with progressive repair strategies.
+ * @param {string} jsonStr
+ * @returns {TestCase[]}
+ */
+function parseWithRepair(jsonStr) {
+  // 1. Direct parse
+  try { return JSON.parse(jsonStr); } catch { /* continue */ }
+
+  // 2. Safe repair: trailing commas only
+  let repaired = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+  try { return JSON.parse(repaired); } catch { /* continue */ }
+
+  // 3. Aggressive repair: unquoted values (scoped to key-value patterns)
+  repaired = repaired.replace(/"(\w+)"\s*:\s*([^"\s\d\[\]{},][^,}\]]*)/g, '"$1": "$2"');
+  try { return JSON.parse(repaired); } catch { /* continue */ }
+
+  throw new Error('La respuesta no tiene el formato esperado — inténtalo de nuevo');
 }
 
 /**
@@ -149,34 +211,47 @@ function extractTestCasesJSON(text) {
  * @returns {Promise<TestCase[]>} — array de test cases
  */
 async function generateTestCases(workerUrl, teamToken, documentText, onProgress, minTCs = 10) {
-  let response;
-  try {
-    response = await fetch(workerUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${teamToken}`,
-      },
-      body: JSON.stringify({
-        max_tokens: CLIENT_MAX_TOKENS,
-      system: buildSystemPrompt(minTCs),
-      messages: [{ role: 'user', content: documentText }],
-    }),
-    });
-  } catch (networkErr) {
-    throw new Error('No se ha podido conectar con el servidor — verifica tu conexión o inténtalo más tarde');
-  }
+  const MAX_RETRIES = 1;
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(parseErrorBody(errorBody));
-  }
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let response;
+    try {
+      response = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${teamToken}`,
+        },
+        body: JSON.stringify({
+          max_tokens: CLIENT_MAX_TOKENS,
+          system: buildSystemPrompt(minTCs),
+          messages: [{ role: 'user', content: documentText }],
+        }),
+      });
+    } catch (networkErr) {
+      throw new Error('No se ha podido conectar con el servidor — verifica tu conexión o inténtalo más tarde');
+    }
 
-  const accumulated = await parseSSEStream(response.body, onProgress);
-  return extractTestCasesJSON(accumulated);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(parseErrorBody(errorBody));
+    }
+
+    const accumulated = await parseSSEStream(response.body, onProgress);
+
+    try {
+      return extractTestCasesJSON(accumulated);
+    } catch (parseErr) {
+      if (attempt < MAX_RETRIES) {
+        onProgress?.('Reintentando generación...');
+        continue;
+      }
+      throw parseErr;
+    }
+  }
 }
 
 // Conditional export for Node.js/vitest (browser ignores this)
 if (typeof module !== 'undefined') {
-  module.exports = { extractTestCasesJSON, parseSSEStream, parseErrorBody, buildSystemPrompt, CLIENT_MAX_TOKENS };
+  module.exports = { extractTestCasesJSON, recoverTruncatedJSON, parseWithRepair, parseSSEStream, parseErrorBody, buildSystemPrompt, CLIENT_MAX_TOKENS };
 }

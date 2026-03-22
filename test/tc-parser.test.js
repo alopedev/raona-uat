@@ -44,6 +44,53 @@ describe('extractTestCasesJSON', () => {
 
 });
 
+describe('extractTestCasesJSON — truncation recovery', () => {
+
+  it('rescues complete TCs from truncated JSON', () => {
+    const input = '[{"tc_id":"TC-01","area":"Login","description":"Test","expected_result":"OK","status":"Pendiente de validar","observations":"—"}, {"tc_id":"TC-02","area":"Lo';
+    const result = extractTestCasesJSON(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].tc_id).toBe('TC-01');
+  });
+
+  it('rescues multiple complete TCs from truncated JSON', () => {
+    const tc1 = '{"tc_id":"TC-01","area":"A","description":"D","expected_result":"R","status":"Pendiente de validar","observations":"—"}';
+    const tc2 = '{"tc_id":"TC-02","area":"B","description":"D2","expected_result":"R2","status":"Pendiente de validar","observations":"—"}';
+    const input = `[${tc1}, ${tc2}, {"tc_id":"TC-03","area":"trun`;
+    const result = extractTestCasesJSON(input);
+    expect(result).toHaveLength(2);
+    expect(result[1].tc_id).toBe('TC-02');
+  });
+
+  it('throws on truncated JSON with zero complete TCs', () => {
+    const input = '[{"tc_id":"TC-01","area":"trun';
+    expect(() => extractTestCasesJSON(input)).toThrow();
+  });
+
+});
+
+describe('extractTestCasesJSON — repair edge cases', () => {
+
+  it('handles colons inside description strings', () => {
+    const input = '[{"tc_id":"TC-01","area":"Login","description":"Paso 1: hacer click en el botón","expected_result":"OK","status":"Pendiente de validar","observations":"—"}]';
+    const result = extractTestCasesJSON(input);
+    expect(result[0].description).toContain('Paso 1:');
+  });
+
+  it('repairs unquoted em dash in observations', () => {
+    const input = '[{"tc_id":"TC-01","area":"A","description":"D","expected_result":"R","status":"Pendiente de validar","observations":—}]';
+    const result = extractTestCasesJSON(input);
+    expect(result[0].observations).toBe('—');
+  });
+
+  it('handles trailing comma before closing bracket', () => {
+    const input = '[{"tc_id":"TC-01","area":"A","description":"D","expected_result":"R","status":"Pendiente de validar","observations":"—"},]';
+    const result = extractTestCasesJSON(input);
+    expect(result).toHaveLength(1);
+  });
+
+});
+
 describe('buildSystemPrompt', () => {
 
   it('injects minTCs number into the prompt', () => {
