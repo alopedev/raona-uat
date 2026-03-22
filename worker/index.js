@@ -19,7 +19,7 @@ const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
  */
 function corsHeaders(env) {
   return {
-    'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ?? '*',
+    'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN ?? 'https://raona-uat.pages.dev',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };

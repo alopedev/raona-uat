@@ -117,6 +117,11 @@ if (typeof window !== 'undefined') (function () {
   // Init
   // ---------------------------------------------------------------------------
   function init() {
+    // pdf.js worker config (moved from inline script for CSP compliance)
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
     metaDate.value = new Date().toISOString().split('T')[0];
 
     // Restore token from sessionStorage
