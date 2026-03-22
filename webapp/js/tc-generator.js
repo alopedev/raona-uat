@@ -41,7 +41,7 @@ FORMATO DE SALIDA — responde SOLO con JSON, sin texto adicional:
 }
 
 /** @type {number} Must match worker MAX_TOKENS_CEILING */
-const CLIENT_MAX_TOKENS = 16384;
+const CLIENT_MAX_TOKENS = 8192;
 
 /**
  * Parse error body safely — returns message string.

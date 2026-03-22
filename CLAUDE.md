@@ -79,7 +79,7 @@ test/
 - Modelo fijo: `@cf/meta/llama-3.3-70b-instruct-fp8-fast`
 - Sanitiza body (solo max_tokens, messages, system)
 - Valida messages: role in [user, assistant, system], content string
-- max_tokens ceiling: 16384
+- max_tokens ceiling: 8192
 - Límite body: 512KB (validado con `request.text()`, no Content-Length)
 - Health check: `GET /`
 - Secret: `TEAM_TOKEN` (via `wrangler secret put`)
