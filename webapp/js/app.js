@@ -31,9 +31,55 @@ function buildUATConfig({ projectName, client, consultant, dateValue, locale, da
   };
 }
 
+/**
+ * Orchestrate TC generation — pure function, no DOM.
+ * @param {Object} params
+ * @param {string} params.extractedText — full document text
+ * @param {string[]} params.features — feature names (empty = single pass)
+ * @param {number} params.minTCs — minimum TCs per call
+ * @param {(text: string, minTCs: number, featureName?: string) => Promise<TestCase[]>} params.generateFn
+ * @param {(text: string, featureName: string, opts?: Object) => string} params.chunkFn
+ * @param {(status: string) => void} [params.onProgress]
+ * @returns {Promise<{ testCases: TestCase[], warnings: string[] }>}
+ */
+async function orchestrateGeneration({ extractedText, features, minTCs, generateFn, chunkFn, onProgress }) {
+  if (features.length === 0) {
+    const testCases = await generateFn(extractedText, minTCs, undefined);
+    return { testCases, warnings: [] };
+  }
+
+  const allTCs = [];
+  const warnings = [];
+
+  for (let i = 0; i < features.length; i++) {
+    const feature = features[i];
+    onProgress?.(`feature ${i + 1} de ${features.length}: ${feature}`);
+
+    const filteredText = chunkFn(extractedText, feature, { targetChars: 12_000 });
+
+    try {
+      const tcs = await generateFn(filteredText, minTCs, feature);
+      allTCs.push(...tcs);
+    } catch {
+      warnings.push(`No se pudieron generar TCs para: ${feature}`);
+    }
+  }
+
+  if (allTCs.length === 0) {
+    throw new Error('No se pudieron generar test cases para ninguna feature');
+  }
+
+  // Renumber TC IDs sequentially
+  for (let i = 0; i < allTCs.length; i++) {
+    allTCs[i].tc_id = `TC-${String(i + 1).padStart(2, '0')}`;
+  }
+
+  return { testCases: allTCs, warnings };
+}
+
 // Conditional export for Node.js/vitest
 if (typeof module !== 'undefined') {
-  module.exports = { buildUATConfig };
+  module.exports = { buildUATConfig, orchestrateGeneration };
 }
 
 // Browser-only IIFE
@@ -369,61 +415,26 @@ if (typeof window !== 'undefined') (function () {
 
       const minTCs = parseInt(metaMinTCs.value, 10) || 10;
       const currentFeatures = getFeatures();
-      let testCases;
-      const warnings = [];
+      const token = val(tokenInput);
 
-      if (currentFeatures.length > 0) {
-        // Multi-pass: one call per feature with filtered text
-        const allTCs = [];
-        for (let i = 0; i < currentFeatures.length; i++) {
-          const feature = currentFeatures[i];
-          stepGenerate.querySelector('span').textContent =
-            `Generando test cases... (feature ${i + 1} de ${currentFeatures.length}: ${feature})`;
-
-          const filteredText = extractRelevantText(extractedText, feature, { targetChars: 12_000 });
-
-          try {
-            const tcs = await generateTestCases(
-              CONFIG.workerUrl,
-              val(tokenInput),
-              filteredText,
-              (partial) => {
-                stepGenerate.querySelector('span').textContent =
-                  `Generando test cases... (feature ${i + 1} de ${currentFeatures.length}: ${feature} — ${partial.length} chars)`;
-              },
-              minTCs,
-              feature
-            );
-            allTCs.push(...tcs);
-          } catch (err) {
-            warnings.push(`No se pudieron generar TCs para: ${feature}`);
-            console.warn(`Feature "${feature}" failed:`, err);
-          }
-        }
-
-        if (allTCs.length === 0) {
-          throw new Error('No se pudieron generar test cases para ninguna feature');
-        }
-
-        // Renumber TC IDs sequentially
-        allTCs.forEach((tc, i) => {
-          tc.tc_id = `TC-${String(i + 1).padStart(2, '0')}`;
-        });
-
-        testCases = allTCs;
-      } else {
-        // Single pass: original behavior
-        testCases = await generateTestCases(
-          CONFIG.workerUrl,
-          val(tokenInput),
-          extractedText,
-          (partial) => {
+      const { testCases, warnings } = await orchestrateGeneration({
+        extractedText,
+        features: currentFeatures,
+        minTCs,
+        generateFn: (text, min, feature) =>
+          generateTestCases(CONFIG.workerUrl, token, text, (partial) => {
+            const featureLabel = feature
+              ? `feature: ${feature} — ${partial.length} chars`
+              : `${partial.length} caracteres`;
             stepGenerate.querySelector('span').textContent =
-              `Generando test cases... (${partial.length} caracteres)`;
-          },
-          minTCs
-        );
-      }
+              `Generando test cases... (${featureLabel})`;
+          }, min, feature),
+        chunkFn: extractRelevantText,
+        onProgress: (status) => {
+          stepGenerate.querySelector('span').textContent =
+            `Generando test cases... (${status})`;
+        },
+      });
 
       stepGenerate.querySelector('span').textContent = 'Generando test cases...';
       setStepDone(stepGenerate);
