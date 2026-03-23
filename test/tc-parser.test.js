@@ -122,6 +122,16 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toMatch(/pasos/i);
   });
 
+  it('includes focal feature when provided', () => {
+    const prompt = buildSystemPrompt(10, 'Gestión Documental');
+    expect(prompt).toContain('Gestión Documental');
+  });
+
+  it('does not include focal instruction when feature is omitted', () => {
+    const prompt = buildSystemPrompt(10);
+    expect(prompt).not.toContain('FOCO');
+  });
+
 });
 
 describe('extractTestCasesJSON — steps field', () => {
