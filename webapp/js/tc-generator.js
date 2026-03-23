@@ -16,23 +16,38 @@ A partir de la documentación proporcionada, genera un mínimo de ${minTCs} test
 REGLAS:
 1. Cobertura end-to-end: seguir flujo natural del usuario (crear → usar → gestionar → auditar)
 2. 1 TC = 1 funcionalidad: no mezclar flujos distintos en un mismo TC. Si un test case cubre más de una funcionalidad, divídelo en TCs separados.
-3. Descripción en imperativo: acciones del tester ("Subir PDF a Inbox...", "Filtrar por estado...")
-4. Resultado verificable: comportamiento observable ("Documento aparece con estado Vigente")
-5. Roles explícitos: TC específico para restricciones de permisos (qué NO puede hacer cada rol)
-6. Edge cases si aplican: docs corruptos, campos vacíos, expiración — solo si la documentación los contempla
-7. Sin implementación: no mencionar tecnología interna, describir desde perspectiva del usuario
-8. Granularidad adecuada: suficiente para que un usuario no técnico entienda qué hacer
+3. Descripción breve en imperativo: resumen de lo que se prueba ("Verificar creación de espacio", "Filtrar documentos por estado")
+4. Pasos numerados: cada TC debe incluir un array "steps" con pasos concretos que guíen al tester paso a paso. Cada paso debe ser una acción observable ("1. Acceder a la sección X", "2. Hacer click en el botón Y", "3. Rellenar el campo Z con valor W")
+5. Resultado verificable: comportamiento observable ("Documento aparece con estado Vigente")
+6. Roles explícitos: TC específico para restricciones de permisos (qué NO puede hacer cada rol)
+7. Edge cases si aplican: docs corruptos, campos vacíos, expiración — solo si la documentación los contempla
+8. Sin implementación: no mencionar tecnología interna, describir desde perspectiva del usuario
+9. Granularidad adecuada: suficiente para que un usuario no técnico entienda qué hacer y cómo hacerlo
 
 EJEMPLO (nivel de calidad esperado):
-TC-01 | Creación espacio | Solicitar creación de un nuevo espacio. Rellenar formulario con nombre, roles y metadatos opcionales. Admin aprueba solicitud | Plantilla provisiona automáticamente los componentes del espacio. El espacio aparece accesible
-TC-04 | Documentos corruptos | Subir un PDF corrupto o inválido | Documento se separa a espacio de revisión con motivo del error. Usuario recibe notificación
+{
+  "tc_id": "TC-01",
+  "area": "Creación espacio",
+  "description": "Solicitar creación de un nuevo espacio",
+  "steps": [
+    "1. Acceder a Teams/ColApp",
+    "2. Seleccionar opción 'Nuevo espacio True Copy Repository'",
+    "3. Rellenar formulario con nombre, roles y metadatos opcionales",
+    "4. Enviar solicitud",
+    "5. System Admin aprueba la solicitud desde el panel de administración"
+  ],
+  "expected_result": "Plantilla provisiona automáticamente los componentes del espacio. El espacio aparece accesible en Teams",
+  "status": "Pendiente de validar",
+  "observations": "—"
+}
 
 FORMATO DE SALIDA — responde SOLO con JSON, sin texto adicional:
 [
   {
     "tc_id": "TC-01",
     "area": "Nombre del área funcional",
-    "description": "Pasos que ejecuta el tester...",
+    "description": "Resumen breve de lo que se prueba",
+    "steps": ["1. Primer paso", "2. Segundo paso", "3. Tercer paso"],
     "expected_result": "Comportamiento esperado observable...",
     "status": "Pendiente de validar",
     "observations": "—"

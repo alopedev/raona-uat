@@ -10,7 +10,14 @@
     {
       "tc_id": "TC-01",
       "area": "Creación espacio",
-      "description": "Desde Teams/ColApp, solicitar creación de un nuevo espacio True Copy Repository. Rellenar formulario con nombre, roles y metadatos opcionales. System Admin aprueba solicitud",
+      "description": "Solicitar creación de un nuevo espacio True Copy Repository",
+      "steps": [
+        "1. Acceder a Teams/ColApp",
+        "2. Seleccionar opción 'Nuevo espacio True Copy Repository'",
+        "3. Rellenar formulario con nombre, roles y metadatos opcionales",
+        "4. Enviar solicitud",
+        "5. System Admin aprueba la solicitud desde el panel de administración"
+      ],
       "expected_result": "Plantilla provisiona automáticamente: Hub Page, Inbox, Board, Solicitudes y Logs. El espacio aparece accesible en Teams",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -18,7 +25,13 @@
     {
       "tc_id": "TC-02",
       "area": "Hub Page",
-      "description": "Acceder al repositorio True Copy. Verificar que la Hub Page carga como página principal",
+      "description": "Verificar carga y navegación de la Hub Page",
+      "steps": [
+        "1. Acceder al repositorio True Copy desde Teams",
+        "2. Verificar que la Hub Page carga como página principal",
+        "3. Comprobar que se muestran los accesos directos según el rol del usuario",
+        "4. Navegar usando flechas del navegador y botón Home"
+      ],
       "expected_result": "Hub muestra accesos directos según rol del usuario (Board, Solicitudes, Importación, Logs). Navegación con flechas del navegador y botón Home funciona correctamente",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -26,7 +39,14 @@
     {
       "tc_id": "TC-03",
       "area": "Importación documentos",
-      "description": "Como Importer, subir varios PDFs a través del Inbox",
+      "description": "Importar documentos PDF a través del Inbox",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Importer",
+        "2. Acceder a la sección Inbox desde el Hub",
+        "3. Subir varios archivos PDF",
+        "4. Esperar a que el proceso automático finalice",
+        "5. Navegar al Board y verificar los documentos importados"
+      ],
       "expected_result": "Proceso automático valida documentos, extrae metadatos y mueve a biblioteca definitiva. Documentos aparecen en Board con estado \"Vigente\"",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -34,7 +54,14 @@
     {
       "tc_id": "TC-04",
       "area": "Documentos corruptos",
-      "description": "Como Importer, subir un PDF corrupto o inválido al Inbox",
+      "description": "Verificar manejo de documentos corruptos o inválidos",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Importer",
+        "2. Acceder a la sección Inbox",
+        "3. Subir un archivo PDF corrupto o inválido",
+        "4. Esperar a que el proceso automático finalice",
+        "5. Verificar que el documento aparece en el espacio de revisión"
+      ],
       "expected_result": "Documento se separa a espacio de revisión con motivo del error. Importer recibe notificación indicando el problema",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -42,7 +69,14 @@
     {
       "tc_id": "TC-05",
       "area": "Board — Modo tarjetas",
-      "description": "Acceder al Board de documentos en modo tarjetas",
+      "description": "Verificar visualización del Board en modo tarjetas",
+      "steps": [
+        "1. Acceder al Board de documentos",
+        "2. Seleccionar modo tarjetas si no está activo",
+        "3. Verificar que cada tarjeta muestra preview del PDF",
+        "4. Pasar el ratón sobre una tarjeta (hover)",
+        "5. Hacer click en una tarjeta"
+      ],
       "expected_result": "Cada tarjeta muestra preview del PDF. Hover amplía la preview. Click abre documento en nueva pestaña",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -50,7 +84,13 @@
     {
       "tc_id": "TC-06",
       "area": "Board — Modo lista",
-      "description": "Cambiar Board a modo lista",
+      "description": "Verificar visualización del Board en modo lista",
+      "steps": [
+        "1. Acceder al Board de documentos",
+        "2. Cambiar a modo lista",
+        "3. Verificar que la tabla muestra las columnas esperadas",
+        "4. Hacer click en el encabezado de una columna para ordenar"
+      ],
       "expected_result": "Tabla muestra columnas: Nombre, Estado, Fechas, Metadatos operativos. Se puede ordenar por cualquier columna",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -58,7 +98,14 @@
     {
       "tc_id": "TC-07",
       "area": "Board — Filtros y búsqueda",
-      "description": "Usar panel de filtros para filtrar por estado y metadatos. Usar buscador global para buscar por contenido del PDF",
+      "description": "Verificar filtros combinables y búsqueda global",
+      "steps": [
+        "1. Acceder al Board de documentos",
+        "2. Abrir el panel de filtros",
+        "3. Aplicar filtro por estado",
+        "4. Añadir filtro por metadato (combinado)",
+        "5. Usar el buscador global para buscar por contenido del PDF"
+      ],
       "expected_result": "Filtros son combinables y actualizan resultados en tiempo real. Buscador encuentra resultados en contenido PDF, metadatos y nombre de archivo",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -66,7 +113,14 @@
     {
       "tc_id": "TC-08",
       "area": "Acciones básicas",
-      "description": "Sobre un documento, ejecutar: Ver (abrir), Descargar, Copiar enlace",
+      "description": "Ejecutar acciones básicas sobre un documento",
+      "steps": [
+        "1. Acceder al Board y seleccionar un documento",
+        "2. Abrir el menú contextual del documento",
+        "3. Seleccionar 'Ver' — verificar que abre en nueva pestaña",
+        "4. Seleccionar 'Descargar' — verificar que se descarga",
+        "5. Seleccionar 'Copiar enlace' — verificar que la URL está en el portapapeles"
+      ],
       "expected_result": "Ver abre PDF en nueva pestaña. Descargar genera copia local. Copiar enlace copia URL SharePoint al portapapeles",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -74,7 +128,14 @@
     {
       "tc_id": "TC-09",
       "area": "Solicitudes Owner",
-      "description": "Como Document Owner, solicitar invalidación de un documento (justificación obligatoria). Solicitar borrado de documento Expirado o Inválido",
+      "description": "Solicitar invalidación y borrado como Document Owner",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Document Owner",
+        "2. Seleccionar un documento vigente en el Board",
+        "3. Solicitar invalidación — rellenar justificación obligatoria",
+        "4. Seleccionar un documento Expirado o Inválido",
+        "5. Solicitar borrado del documento"
+      ],
       "expected_result": "Solicitud de invalidación creada correctamente con justificación. Solicitud de borrado solo disponible para docs Expirados o Inválidos",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -82,7 +143,13 @@
     {
       "tc_id": "TC-10",
       "area": "Restricciones Viewer",
-      "description": "Como Document Viewer, acceder al menú de acciones de un documento",
+      "description": "Verificar restricciones de permisos del rol Viewer",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Document Viewer",
+        "2. Acceder al Board y seleccionar un documento",
+        "3. Abrir el menú contextual del documento",
+        "4. Verificar las opciones disponibles en el menú"
+      ],
       "expected_result": "Menú contextual solo muestra acciones básicas (Ver, Descargar, Copiar enlace). NO aparecen opciones de solicitud de invalidación ni borrado",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -90,7 +157,14 @@
     {
       "tc_id": "TC-11",
       "area": "Flujo aprobación",
-      "description": "Como Functional Admin, acceder a página de solicitudes pendientes. Aprobar una solicitud (con doble autenticación M365). Rechazar otra solicitud (motivo obligatorio)",
+      "description": "Aprobar y rechazar solicitudes como Functional Admin",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Functional Admin",
+        "2. Acceder a la página de solicitudes pendientes",
+        "3. Seleccionar una solicitud y aprobarla (completar doble autenticación M365)",
+        "4. Seleccionar otra solicitud y rechazarla (rellenar motivo obligatorio)",
+        "5. Verificar que el solicitante recibe notificación del resultado"
+      ],
       "expected_result": "Solicitud aprobada: documento cambia estado (Inválido o movido a papelera). Solicitud rechazada: documento mantiene estado. Solicitante recibe notificación del resultado en ambos casos",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -98,7 +172,14 @@
     {
       "tc_id": "TC-12",
       "area": "Selección masiva",
-      "description": "Seleccionar múltiples documentos en el Board. Ejecutar acciones masivas: copiar enlaces, solicitar invalidación masiva",
+      "description": "Ejecutar acciones masivas sobre múltiples documentos",
+      "steps": [
+        "1. Acceder al Board de documentos",
+        "2. Seleccionar múltiples documentos usando las casillas de selección",
+        "3. Ejecutar acción masiva 'Copiar enlaces'",
+        "4. Iniciar sesión como Owner/FA y seleccionar múltiples documentos",
+        "5. Ejecutar acción masiva 'Solicitar invalidación'"
+      ],
       "expected_result": "Copiar enlaces funciona para todos los roles. Solicitud masiva de invalidación solo disponible para Owner/FA. Se genera una solicitud por cada documento seleccionado",
       "status": "Pendiente de validar",
       "observations": "—"
@@ -106,7 +187,14 @@
     {
       "tc_id": "TC-13",
       "area": "Logs de auditoría",
-      "description": "Como Functional Admin, acceder a la vista de logs desde el Hub. Verificar que las acciones realizadas en TCs anteriores aparecen registradas. Exportar logs a Excel",
+      "description": "Verificar registro de auditoría y exportación",
+      "steps": [
+        "1. Iniciar sesión como usuario con rol Functional Admin",
+        "2. Acceder a la vista de logs desde el Hub",
+        "3. Verificar que las acciones realizadas en TCs anteriores aparecen registradas",
+        "4. Comprobar que los logs muestran: fecha/hora, documento, tipo acción, usuario",
+        "5. Exportar logs a Excel y verificar el archivo descargado"
+      ],
       "expected_result": "Logs muestran: fecha/hora, documento, tipo acción, usuario. Todas las acciones de la sesión están registradas. Exportación genera archivo Excel. Logs son inmutables (no se pueden modificar ni eliminar)",
       "status": "Pendiente de validar",
       "observations": "—"

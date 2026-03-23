@@ -5,7 +5,8 @@
  * @typedef {Object} TestCase
  * @property {string} tc_id — Identificador (TC-01, TC-02...)
  * @property {string} area — Área funcional
- * @property {string} description — Pasos del tester
+ * @property {string} description — Resumen breve de lo que se prueba
+ * @property {string[]} [steps] — Pasos numerados para el tester
  * @property {string} expected_result — Resultado esperado observable
  * @property {string} status — "Pendiente de validar" | "Validado" | "No validado"
  * @property {string} [observations] — Notas o "—"
@@ -196,14 +197,14 @@ function buildTestCases(wb, cfg) {
   // Margen columna A
   ws.getColumn('A').width = 8.83;
 
-  // Título (fila 2, merge B2:G2)
-  ws.mergeCells('B2:G2');
+  // Título (fila 2, merge B2:H2)
+  ws.mergeCells('B2:H2');
   ws.getCell('B2').value = `UAT Report — ${cfg.project_name}`;
   ws.getCell('B2').font = TABLE_TITLE;
   ws.getRow(2).height = 28;
 
-  // Subtítulo (fila 3, merge B3:G3)
-  ws.mergeCells('B3:G3');
+  // Subtítulo (fila 3, merge B3:H3)
+  ws.mergeCells('B3:H3');
   ws.getCell('B3').value =
     `Fecha: ${cfg.date}  |  Proyecto: ${cfg.project_name}  |  ` +
     `Cliente: ${cfg.client}  |  Consultor: ${cfg.consultant}`;
@@ -227,8 +228,8 @@ function buildTestCases(wb, cfg) {
 
   // Headers (fila 9)
   const HEADER_ROW = 9;
-  const headers = ['TC ID', 'Área funcional', 'Descripción', 'Resultado esperado', 'Estado', 'Observaciones'];
-  const widths = [8, 22, 55, 55, 20, 45];
+  const headers = ['TC ID', 'Área funcional', 'Descripción', 'Pasos', 'Resultado esperado', 'Estado', 'Observaciones'];
+  const widths = [8, 22, 45, 45, 45, 20, 35];
   applyHeaderRow(ws, HEADER_ROW, headers, widths, color);
 
   // Datos
@@ -237,19 +238,22 @@ function buildTestCases(wb, cfg) {
 
   testCases.forEach((tc, i) => {
     const row = DATA_START + i;
+    const stepsText = Array.isArray(tc.steps) && tc.steps.length > 0
+      ? tc.steps.join('\n')
+      : '—';
     const values = [
-      tc.tc_id, tc.area, tc.description,
+      tc.tc_id, tc.area, tc.description, stepsText,
       tc.expected_result, tc.status, tc.observations ?? '—',
     ];
     values.forEach((val, j) => {
       applyDataCell(ws, row, j + 2, val);
     });
 
-    // Estilo columna Estado (col F = 6)
+    // Estilo columna Estado (col G = 7)
     const status = tc.status;
     if (TC_STATUS_MAP[status]) {
       const { font, fill } = TC_STATUS_MAP[status];
-      const estadoCell = ws.getCell(row, 6); // col F = Estado
+      const estadoCell = ws.getCell(row, 7); // col G = Estado
       estadoCell.font = font;
       estadoCell.fill = fill;
       estadoCell.alignment = WRAP_CENTER;
@@ -262,7 +266,7 @@ function buildTestCases(wb, cfg) {
   if (testCases.length > 0) {
     const dataEnd = DATA_START + testCases.length - 1;
     for (let r = DATA_START; r <= dataEnd; r++) {
-      ws.getCell(r, 6).dataValidation = {
+      ws.getCell(r, 7).dataValidation = {
         type: 'list',
         allowBlank: false,
         formulae: ['"Pendiente de validar,Validado,No validado"'],
