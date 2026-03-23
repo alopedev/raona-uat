@@ -61,3 +61,37 @@ describe('generateUATWorkbook — no environment references', () => {
   });
 
 });
+
+describe('generateUATWorkbook — Pasos column', () => {
+
+  it('Test Cases tab has Pasos column header', async () => {
+    const wb = await generateUATWorkbook(baseCfg);
+    const ws = wb.getWorksheet('Test Cases');
+    const values = allCellValues(ws);
+    expect(values).toContain('Pasos');
+  });
+
+  it('renders steps as newline-joined string', async () => {
+    const cfgWithSteps = {
+      ...baseCfg,
+      test_cases: [{
+        tc_id: 'TC-01', area: 'Login', description: 'Test login',
+        steps: ['1. Abrir navegador', '2. Ir a la URL', '3. Introducir credenciales'],
+        expected_result: 'OK', status: 'Pendiente de validar', observations: '—',
+      }],
+    };
+    const wb = await generateUATWorkbook(cfgWithSteps);
+    const ws = wb.getWorksheet('Test Cases');
+    const values = allCellValues(ws);
+    expect(values).toContain('1. Abrir navegador\n2. Ir a la URL\n3. Introducir credenciales');
+  });
+
+  it('renders dash when steps missing', async () => {
+    const wb = await generateUATWorkbook(baseCfg);
+    const ws = wb.getWorksheet('Test Cases');
+    // Row 10 = first data row, col 5 = Pasos (after TC ID, Area, Descripción, Pasos)
+    const pasosCell = ws.getCell(10, 5);
+    expect(pasosCell.value).toBe('—');
+  });
+
+});
