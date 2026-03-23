@@ -368,20 +368,71 @@ if (typeof window !== 'undefined') (function () {
       setStepActive(stepGenerate);
 
       const minTCs = parseInt(metaMinTCs.value, 10) || 10;
+      const currentFeatures = getFeatures();
+      let testCases;
+      const warnings = [];
 
-      const testCases = await generateTestCases(
-        CONFIG.workerUrl,
-        val(tokenInput),
-        extractedText,
-        (partial) => {
+      if (currentFeatures.length > 0) {
+        // Multi-pass: one call per feature with filtered text
+        const allTCs = [];
+        for (let i = 0; i < currentFeatures.length; i++) {
+          const feature = currentFeatures[i];
           stepGenerate.querySelector('span').textContent =
-            `Generando test cases... (${partial.length} caracteres)`;
-        },
-        minTCs
-      );
+            `Generando test cases... (feature ${i + 1} de ${currentFeatures.length}: ${feature})`;
+
+          const filteredText = extractRelevantText(extractedText, feature, { targetChars: 12_000 });
+
+          try {
+            const tcs = await generateTestCases(
+              CONFIG.workerUrl,
+              val(tokenInput),
+              filteredText,
+              (partial) => {
+                stepGenerate.querySelector('span').textContent =
+                  `Generando test cases... (feature ${i + 1} de ${currentFeatures.length}: ${feature} — ${partial.length} chars)`;
+              },
+              minTCs,
+              feature
+            );
+            allTCs.push(...tcs);
+          } catch (err) {
+            warnings.push(`No se pudieron generar TCs para: ${feature}`);
+            console.warn(`Feature "${feature}" failed:`, err);
+          }
+        }
+
+        if (allTCs.length === 0) {
+          throw new Error('No se pudieron generar test cases para ninguna feature');
+        }
+
+        // Renumber TC IDs sequentially
+        allTCs.forEach((tc, i) => {
+          tc.tc_id = `TC-${String(i + 1).padStart(2, '0')}`;
+        });
+
+        testCases = allTCs;
+      } else {
+        // Single pass: original behavior
+        testCases = await generateTestCases(
+          CONFIG.workerUrl,
+          val(tokenInput),
+          extractedText,
+          (partial) => {
+            stepGenerate.querySelector('span').textContent =
+              `Generando test cases... (${partial.length} caracteres)`;
+          },
+          minTCs
+        );
+      }
 
       stepGenerate.querySelector('span').textContent = 'Generando test cases...';
       setStepDone(stepGenerate);
+
+      // Show warnings for partial failures
+      if (warnings.length > 0) {
+        warningMsg.textContent = warnings.join(' | ');
+        warningMsg.classList.remove('hidden');
+      }
 
       // --- Step 3: Build Excel ---
       setStepActive(stepExcel);

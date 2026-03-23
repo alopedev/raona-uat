@@ -4,14 +4,19 @@
  */
 
 /**
- * Build system prompt with dynamic minTCs injection.
+ * Build system prompt with dynamic minTCs injection and optional focal feature.
  * @param {number} minTCs — minimum number of test cases to generate
+ * @param {string} [featureName] — optional focal feature to focus TC generation on
  * @returns {string}
  */
-function buildSystemPrompt(minTCs) {
+function buildSystemPrompt(minTCs, featureName) {
+  const focalInstruction = featureName
+    ? `\n\nFOCO: Genera test cases SOLO para la feature "${featureName}". Ignora funcionalidades no relacionadas con esta feature.`
+    : '';
+
   return `Eres un generador experto de test cases para validaciones UAT de proyectos de software.
 
-A partir de la documentación proporcionada, genera un mínimo de ${minTCs} test cases siguiendo estas reglas:
+A partir de la documentación proporcionada, genera un mínimo de ${minTCs} test cases siguiendo estas reglas:${focalInstruction}
 
 REGLAS:
 1. Cobertura end-to-end: seguir flujo natural del usuario (crear → usar → gestionar → auditar)
@@ -223,9 +228,10 @@ function parseWithRepair(jsonStr) {
  * @param {string} documentText — texto extraído de la documentación
  * @param {(partial: string) => void} [onProgress] — callback con texto parcial acumulado
  * @param {number} [minTCs=10] — mínimo de test cases a generar
+ * @param {string} [featureName] — optional focal feature name
  * @returns {Promise<TestCase[]>} — array de test cases
  */
-async function generateTestCases(workerUrl, teamToken, documentText, onProgress, minTCs = 10) {
+async function generateTestCases(workerUrl, teamToken, documentText, onProgress, minTCs = 10, featureName) {
   const MAX_RETRIES = 1;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -239,7 +245,7 @@ async function generateTestCases(workerUrl, teamToken, documentText, onProgress,
         },
         body: JSON.stringify({
           max_tokens: CLIENT_MAX_TOKENS,
-          system: buildSystemPrompt(minTCs),
+          system: buildSystemPrompt(minTCs, featureName),
           messages: [{ role: 'user', content: documentText }],
         }),
       });
