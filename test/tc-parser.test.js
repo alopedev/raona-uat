@@ -112,4 +112,49 @@ describe('buildSystemPrompt', () => {
     expect(prompt8).not.toContain('20');
   });
 
+  it('includes steps field in JSON schema', () => {
+    const prompt = buildSystemPrompt(10);
+    expect(prompt).toContain('"steps"');
+  });
+
+  it('includes rule about numbered steps for tester guidance', () => {
+    const prompt = buildSystemPrompt(10);
+    expect(prompt).toMatch(/pasos/i);
+  });
+
+  it('includes focal feature when provided', () => {
+    const prompt = buildSystemPrompt(10, 'Gestión Documental');
+    expect(prompt).toContain('Gestión Documental');
+  });
+
+  it('does not include focal instruction when feature is omitted', () => {
+    const prompt = buildSystemPrompt(10);
+    expect(prompt).not.toContain('FOCO');
+  });
+
+});
+
+describe('extractTestCasesJSON — steps field', () => {
+
+  it('parses TC with steps array', () => {
+    const input = JSON.stringify([{
+      tc_id: 'TC-01', area: 'Login', description: 'Test login',
+      steps: ['1. Abrir navegador', '2. Ir a la URL', '3. Introducir credenciales'],
+      expected_result: 'OK', status: 'Pendiente de validar', observations: '—',
+    }]);
+    const result = extractTestCasesJSON(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].steps).toEqual(['1. Abrir navegador', '2. Ir a la URL', '3. Introducir credenciales']);
+  });
+
+  it('parses TC without steps (backward compat)', () => {
+    const input = JSON.stringify([{
+      tc_id: 'TC-01', area: 'Login', description: 'Test login',
+      expected_result: 'OK', status: 'Pendiente de validar', observations: '—',
+    }]);
+    const result = extractTestCasesJSON(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].steps).toBeUndefined();
+  });
+
 });

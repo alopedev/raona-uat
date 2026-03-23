@@ -31,9 +31,55 @@ function buildUATConfig({ projectName, client, consultant, dateValue, locale, da
   };
 }
 
+/**
+ * Orchestrate TC generation — pure function, no DOM.
+ * @param {Object} params
+ * @param {string} params.extractedText — full document text
+ * @param {string[]} params.features — feature names (empty = single pass)
+ * @param {number} params.minTCs — minimum TCs per call
+ * @param {(text: string, minTCs: number, featureName?: string) => Promise<TestCase[]>} params.generateFn
+ * @param {(text: string, featureName: string, opts?: Object) => string} params.chunkFn
+ * @param {(status: string) => void} [params.onProgress]
+ * @returns {Promise<{ testCases: TestCase[], warnings: string[] }>}
+ */
+async function orchestrateGeneration({ extractedText, features, minTCs, generateFn, chunkFn, onProgress }) {
+  if (features.length === 0) {
+    const testCases = await generateFn(extractedText, minTCs, undefined);
+    return { testCases, warnings: [] };
+  }
+
+  const allTCs = [];
+  const warnings = [];
+
+  for (let i = 0; i < features.length; i++) {
+    const feature = features[i];
+    onProgress?.(`feature ${i + 1} de ${features.length}: ${feature}`);
+
+    const filteredText = chunkFn(extractedText, feature, { targetChars: 12_000 });
+
+    try {
+      const tcs = await generateFn(filteredText, minTCs, feature);
+      allTCs.push(...tcs);
+    } catch {
+      warnings.push(`No se pudieron generar TCs para: ${feature}`);
+    }
+  }
+
+  if (allTCs.length === 0) {
+    throw new Error('No se pudieron generar test cases para ninguna feature');
+  }
+
+  // Renumber TC IDs sequentially
+  for (let i = 0; i < allTCs.length; i++) {
+    allTCs[i].tc_id = `TC-${String(i + 1).padStart(2, '0')}`;
+  }
+
+  return { testCases: allTCs, warnings };
+}
+
 // Conditional export for Node.js/vitest
 if (typeof module !== 'undefined') {
-  module.exports = { buildUATConfig };
+  module.exports = { buildUATConfig, orchestrateGeneration };
 }
 
 // Browser-only IIFE
@@ -57,10 +103,15 @@ if (typeof window !== 'undefined') (function () {
   // ---------------------------------------------------------------------------
   /** @type {File[]} */
   let uploadedFiles = [];
+  /** @type {string[]} */
+  let features = [];
   /** @type {ExcelJS.Workbook|null} */
   let generatedWorkbook = null;
   /** @type {string} */
   let generatedFilename = '';
+
+  /** @type {number} Maximum features allowed per generation */
+  const MAX_FEATURES = 5;
 
   // ---------------------------------------------------------------------------
   // DOM refs (using data-testid where available)
@@ -77,6 +128,9 @@ if (typeof window !== 'undefined') (function () {
   const metaConsultant = $('meta-consultant');
   const metaMinTCs = $('meta-min-tcs');
   const metaDate = $('meta-date');
+  const featureInput = $('feature-input');
+  const btnAddFeature = $('btn-add-feature');
+  const featureChipsEl = $('feature-chips');
   const btnGenerate = $('btn-generate');
   const progressContainer = $('progress');
   const stepExtract = $('step-extract');
@@ -157,6 +211,15 @@ if (typeof window !== 'undefined') (function () {
 
     pastedText.addEventListener('input', debouncedValidate);
 
+    // Feature chips
+    btnAddFeature.addEventListener('click', addFeatureFromInput);
+    featureInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addFeatureFromInput();
+      }
+    });
+
     for (const el of [metaProject, metaClient, metaConsultant]) {
       el.addEventListener('input', debouncedValidate);
     }
@@ -207,6 +270,67 @@ if (typeof window !== 'undefined') (function () {
 
       fileChips.appendChild(chip);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Feature management
+  // ---------------------------------------------------------------------------
+  function addFeatureFromInput() {
+    const name = featureInput.value.trim();
+    if (!name) return;
+    if (features.includes(name)) { featureInput.value = ''; return; }
+    if (features.length >= MAX_FEATURES) return;
+    features.push(name);
+    featureInput.value = '';
+    renderFeatureChips();
+  }
+
+  function removeFeature(name) {
+    features = features.filter(f => f !== name);
+    renderFeatureChips();
+  }
+
+  function renderFeatureChips() {
+    featureChipsEl.textContent = '';
+    for (const name of features) {
+      const chip = document.createElement('div');
+      chip.className = 'feature-chip';
+      chip.setAttribute('data-testid', 'feature-chip');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = name;
+      chip.appendChild(nameSpan);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '\u00D7';
+      removeBtn.setAttribute('aria-label', `Eliminar ${name}`);
+      removeBtn.addEventListener('click', () => removeFeature(name));
+      chip.appendChild(removeBtn);
+
+      featureChipsEl.appendChild(chip);
+    }
+
+    // Show/hide limit message
+    const existing = featureChipsEl.parentElement.querySelector('.feature-limit-msg');
+    if (features.length >= MAX_FEATURES) {
+      if (!existing) {
+        const msg = document.createElement('p');
+        msg.className = 'feature-limit-msg';
+        msg.textContent = `Máximo ${MAX_FEATURES} features por generación`;
+        featureChipsEl.parentElement.appendChild(msg);
+      }
+      btnAddFeature.disabled = true;
+      featureInput.disabled = true;
+    } else {
+      if (existing) existing.remove();
+      btnAddFeature.disabled = false;
+      featureInput.disabled = false;
+    }
+  }
+
+  /** @returns {string[]} current feature list */
+  function getFeatures() {
+    return [...features];
   }
 
   // ---------------------------------------------------------------------------
@@ -290,20 +414,36 @@ if (typeof window !== 'undefined') (function () {
       setStepActive(stepGenerate);
 
       const minTCs = parseInt(metaMinTCs.value, 10) || 10;
+      const currentFeatures = getFeatures();
+      const token = val(tokenInput);
 
-      const testCases = await generateTestCases(
-        CONFIG.workerUrl,
-        val(tokenInput),
+      const { testCases, warnings } = await orchestrateGeneration({
         extractedText,
-        (partial) => {
+        features: currentFeatures,
+        minTCs,
+        generateFn: (text, min, feature) =>
+          generateTestCases(CONFIG.workerUrl, token, text, (partial) => {
+            const featureLabel = feature
+              ? `feature: ${feature} — ${partial.length} chars`
+              : `${partial.length} caracteres`;
+            stepGenerate.querySelector('span').textContent =
+              `Generando test cases... (${featureLabel})`;
+          }, min, feature),
+        chunkFn: extractRelevantText,
+        onProgress: (status) => {
           stepGenerate.querySelector('span').textContent =
-            `Generando test cases... (${partial.length} caracteres)`;
+            `Generando test cases... (${status})`;
         },
-        minTCs
-      );
+      });
 
       stepGenerate.querySelector('span').textContent = 'Generando test cases...';
       setStepDone(stepGenerate);
+
+      // Show warnings for partial failures
+      if (warnings.length > 0) {
+        warningMsg.textContent = warnings.join(' | ');
+        warningMsg.classList.remove('hidden');
+      }
 
       // --- Step 3: Build Excel ---
       setStepActive(stepExcel);

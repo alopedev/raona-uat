@@ -494,6 +494,96 @@ textarea {
 
 .file-chip button:hover { opacity: 1; }
 
+/* ---- Feature chips ---- */
+.feature-group {
+  margin-top: 18px;
+}
+
+.form-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 2px 0 10px 0;
+  line-height: 1.4;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.feature-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.feature-input-row input {
+  flex: 1;
+}
+
+.btn-add-feature {
+  padding: 8px 16px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+
+.btn-add-feature:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: none;
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.feature-chip button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+  font-family: var(--font-body);
+  font-weight: 600;
+  opacity: 0.6;
+  transition: opacity var(--transition);
+}
+
+.feature-chip button:hover { opacity: 1; }
+
+.feature-limit-msg {
+  font-size: 0.78rem;
+  color: var(--error, #c00);
+  margin-top: 6px;
+}
+
 /* ---- Separator ---- */
 .separator {
   display: flex;

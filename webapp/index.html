@@ -87,6 +87,16 @@
                 <option value="18">18</option>
                 <option value="19">19</option>
                 <option value="20">20</option>
+                <option value="21">21</option>
+                <option value="22">22</option>
+                <option value="23">23</option>
+                <option value="24">24</option>
+                <option value="25">25</option>
+                <option value="26">26</option>
+                <option value="27">27</option>
+                <option value="28">28</option>
+                <option value="29">29</option>
+                <option value="30">30</option>
               </select>
             </div>
           </div>
@@ -127,6 +137,17 @@
                 <textarea id="pasted-text" data-testid="pasted-text" placeholder="Pegar documentación aquí..." rows="5"></textarea>
               </div>
             </div>
+          </div>
+
+          <!-- Features específicas (opcional) -->
+          <div class="form-group feature-group">
+            <label>Features específicas de testeo <span class="optional">(opcional)</span></label>
+            <p class="form-hint">Aquí puedes especificar manualmente las features sobre las que realizar el testeo</p>
+            <div class="feature-input-row">
+              <input type="text" id="feature-input" data-testid="feature-input" placeholder="Nombre de la feature...">
+              <button type="button" class="btn-add-feature" id="btn-add-feature" data-testid="btn-add-feature">Añadir feature</button>
+            </div>
+            <div class="feature-chips" id="feature-chips" data-testid="feature-chips"></div>
           </div>
         </div>
       </div>
@@ -184,6 +205,7 @@
 
   <!-- App modules -->
   <script src="js/file-parser.js"></script>
+  <script src="js/text-chunker.js"></script>
   <script src="js/excel-builder.js"></script>
   <script src="js/tc-generator.js"></script>
   <script src="js/app.js"></script>
