@@ -111,7 +111,7 @@ if (typeof window !== 'undefined') (function () {
   let generatedFilename = '';
 
   /** @type {number} Maximum features allowed per generation */
-  const MAX_FEATURES = 5;
+  const MAX_FEATURES = 10;
 
   // ---------------------------------------------------------------------------
   // DOM refs (using data-testid where available)
@@ -129,7 +129,7 @@ if (typeof window !== 'undefined') (function () {
   const metaMinTCs = $('meta-min-tcs');
   const metaDate = $('meta-date');
   const featureInput = $('feature-input');
-  const btnAddFeature = $('btn-add-feature');
+  const featureTokenInput = $('feature-token-input');
   const featureChipsEl = $('feature-chips');
   const btnGenerate = $('btn-generate');
   const progressContainer = $('progress');
@@ -211,12 +211,38 @@ if (typeof window !== 'undefined') (function () {
 
     pastedText.addEventListener('input', debouncedValidate);
 
-    // Feature chips
-    btnAddFeature.addEventListener('click', addFeatureFromInput);
+    // Feature token input
+    featureTokenInput.addEventListener('click', () => featureInput.focus());
+
+    featureInput.addEventListener('input', () => {
+      const val = featureInput.value;
+      if (val.includes(',') || val.includes('\n')) {
+        addFeaturesFromText(val);
+        featureInput.value = '';
+      }
+    });
+
+    featureInput.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData('text');
+      addFeaturesFromText(pasted);
+    });
+
     featureInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        addFeatureFromInput();
+        addFeaturesFromText(featureInput.value);
+        featureInput.value = '';
+      }
+      if (e.key === 'Backspace' && !featureInput.value && features.length > 0) {
+        removeFeature(features[features.length - 1]);
+      }
+    });
+
+    featureInput.addEventListener('blur', () => {
+      if (featureInput.value.trim()) {
+        addFeaturesFromText(featureInput.value);
+        featureInput.value = '';
       }
     });
 
@@ -275,13 +301,20 @@ if (typeof window !== 'undefined') (function () {
   // ---------------------------------------------------------------------------
   // Feature management
   // ---------------------------------------------------------------------------
-  function addFeatureFromInput() {
-    const name = featureInput.value.trim();
-    if (!name) return;
-    if (features.includes(name)) { featureInput.value = ''; return; }
-    if (features.length >= MAX_FEATURES) return;
-    features.push(name);
-    featureInput.value = '';
+
+  /**
+   * Add features from raw text using parseFeatureInput.
+   * Respects MAX_FEATURES and deduplicates against existing features.
+   * @param {string} text
+   */
+  function addFeaturesFromText(text) {
+    const parsed = parseFeatureInput(text, MAX_FEATURES);
+    for (const name of parsed) {
+      if (features.length >= MAX_FEATURES) break;
+      const key = name.toLowerCase();
+      if (features.some(f => f.toLowerCase() === key)) continue;
+      features.push(name);
+    }
     renderFeatureChips();
   }
 
@@ -310,21 +343,24 @@ if (typeof window !== 'undefined') (function () {
       featureChipsEl.appendChild(chip);
     }
 
-    // Show/hide limit message
-    const existing = featureChipsEl.parentElement.querySelector('.feature-limit-msg');
-    if (features.length >= MAX_FEATURES) {
-      if (!existing) {
-        const msg = document.createElement('p');
-        msg.className = 'feature-limit-msg';
-        msg.textContent = `Máximo ${MAX_FEATURES} features por generación`;
-        featureChipsEl.parentElement.appendChild(msg);
-      }
-      btnAddFeature.disabled = true;
-      featureInput.disabled = true;
-    } else {
-      if (existing) existing.remove();
-      btnAddFeature.disabled = false;
-      featureInput.disabled = false;
+    // Show/hide limit state
+    const atLimit = features.length >= MAX_FEATURES;
+    featureTokenInput.classList.toggle('at-limit', atLimit);
+    featureInput.disabled = atLimit;
+    featureInput.placeholder = atLimit
+      ? `Máximo ${MAX_FEATURES} features alcanzado`
+      : 'Gestión Documental, Firma Electrónica...';
+
+    const existing = featureTokenInput.parentElement.querySelector('.feature-limit-msg');
+    if (atLimit && !existing) {
+      const msg = document.createElement('p');
+      msg.className = 'feature-limit-msg';
+      msg.textContent = `${features.length}/${MAX_FEATURES} features`;
+      featureTokenInput.parentElement.appendChild(msg);
+    } else if (!atLimit && existing) {
+      existing.remove();
+    } else if (atLimit && existing) {
+      existing.textContent = `${features.length}/${MAX_FEATURES} features`;
     }
   }
 
