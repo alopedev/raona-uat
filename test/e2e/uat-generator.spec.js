@@ -115,6 +115,51 @@ test.describe('Raona UAT Generator — producción', () => {
     await expect(page.locator('#result-stats')).toContainText('test cases');
   });
 
+  test('token-input: pegar features con prefijos crea chips limpios y deduplica', async ({ page }) => {
+    const input = page.locator('[data-testid="feature-input"]');
+    const chips = page.locator('[data-testid="feature-chip"]');
+
+    // Paste multi-line text with FT.XX prefixes + a duplicate
+    await input.focus();
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="feature-input"]');
+      const text = 'FT.01 - Gestión Documental\nFT.02 - Firma Electrónica\nFT.03 - Gestión Documental\nFT.04 - Workflow';
+      const event = new ClipboardEvent('paste', {
+        bubbles: true, cancelable: true,
+        clipboardData: new DataTransfer(),
+      });
+      event.clipboardData.setData('text/plain', text);
+      el.dispatchEvent(event);
+    });
+
+    // 4 lines pasted but one duplicate → 3 chips
+    await expect(chips).toHaveCount(3);
+    await expect(chips.nth(0)).toContainText('Gestión Documental');
+    await expect(chips.nth(1)).toContainText('Firma Electrónica');
+    await expect(chips.nth(2)).toContainText('Workflow');
+
+    // Type comma-delimited feature
+    await input.fill('Reporting,');
+    await input.dispatchEvent('input');
+    await expect(chips).toHaveCount(4);
+    await expect(chips.nth(3)).toContainText('Reporting');
+
+    // Remove via × button
+    await chips.nth(0).locator('button').click();
+    await expect(chips).toHaveCount(3);
+    await expect(chips.nth(0)).toContainText('Firma Electrónica');
+  });
+
+  test('token-input: selector minTCs muestra opciones 1-5', async ({ page }) => {
+    const select = page.locator('[data-testid="meta-min-tcs"]');
+    const options = select.locator('option');
+    await expect(options).toHaveCount(5);
+    await expect(select).toHaveValue('3'); // default
+
+    const values = await options.evaluateAll(opts => opts.map(o => o.value));
+    expect(values).toEqual(['1', '2', '3', '4', '5']);
+  });
+
   test('security headers presentes', async ({ page }) => {
     const response = await page.goto('/');
     const headers = response.headers();
